@@ -1,119 +1,132 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import api from "../api";
 
 export default function Attendance() {
-  const [attendance, setAttendance] = useState([]);
-  const [filterDate, setFilterDate] = useState("");
-  const [filterDept, setFilterDept] = useState("");
+  const [employees, setEmployees] = useState([]);
+  const [records, setRecords] = useState([]);
+  const [form, setForm] = useState({
+    employee: "",
+    date: "",
+    status: "Present"
+  });
 
-  // Fetch attendance
+  const [message, setMessage] = useState("");
+
+  // Fetch employees
   useEffect(() => {
-    const fetchAttendance = async () => {
+    const fetchEmployees = async () => {
       try {
-        const res = await api.get("/attendance");
-        setAttendance(res.data);
+        const res = await api.get("/employees");
+        setEmployees(res.data);
       } catch (err) {
         console.error(err);
       }
     };
 
-    fetchAttendance();
+    fetchEmployees();
   }, []);
 
-  // Get unique departments for filter dropdown
-  const departments = useMemo(() => {
-    const depts = attendance.map(
-      (rec) => rec.employeeId?.department
-    );
-    return [...new Set(depts)];
-  }, [attendance]);
+  // Fetch attendance
+  const fetchAttendance = async () => {
+    if (!form.employee) return;
 
-  // Filter logic
-  const filteredAttendance = attendance.filter((rec) => {
-    const recordDate = new Date(rec.date)
-      .toISOString()
-      .split("T")[0];
+    try {
+      const res = await api.get(`/attendance/${form.employee}`);
+      setRecords(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-    const matchDate = filterDate
-      ? recordDate === filterDate
-      : true;
+  useEffect(() => {
+    fetchAttendance();
+  }, [form.employee]);
 
-    const matchDept = filterDept
-      ? rec.employeeId?.department === filterDept
-      : true;
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+  setMessage("");
 
-    return matchDate && matchDept;
-  });
+  if (!form.employee || !form.date || !form.status) {
+    setMessage("All fields required");
+    return;
+  }
+
+  try {
+    const res = await api.post("/attendance", form);
+    setMessage("Attendance marked successfully");
+    fetchAttendance();
+  } catch (err) {
+    console.log("Backend error:", err.response?.data);
+    setMessage(err.response?.data?.message || "Server Error");
+  }
+};
+
 
   return (
     <div>
-      <h2>Attendance Records</h2>
+      <h2>Attendance Management</h2>
 
-      {/* Filters */}
-      <div style={{ marginBottom: "20px" }}>
-        <input
-          type="date"
-          value={filterDate}
-          onChange={(e) => setFilterDate(e.target.value)}
-        />
-
+      {/* Attendance Form */}
+      <form
+        onSubmit={handleSubmit}
+        style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}
+      >
         <select
-          value={filterDept}
-          onChange={(e) => setFilterDept(e.target.value)}
+          value={form.employee}
+          onChange={(e) =>
+            setForm({ ...form, employee: e.target.value })
+          }
         >
-          <option value="">All Departments</option>
-          {departments.map((dept, index) => (
-            <option key={index} value={dept}>
-              {dept}
+          <option value="">Select Employee</option>
+          {employees.map((emp) => (
+            <option key={emp._id} value={emp._id}>
+              {emp.fullName} ({emp.department})
             </option>
           ))}
         </select>
 
-        <button
-          className="btn-primary"
-          onClick={() => {
-            setFilterDate("");
-            setFilterDept("");
-          }}
+        <input
+          type="date"
+          value={form.date}
+          onChange={(e) =>
+            setForm({ ...form, date: e.target.value })
+          }
+        />
+
+        <select
+          value={form.status}
+          onChange={(e) =>
+            setForm({ ...form, status: e.target.value })
+          }
         >
-          Clear Filters
+          <option value="Present">Present</option>
+          <option value="Absent">Absent</option>
+        </select>
+
+        <button type="submit" className="btn-primary">
+          Mark Attendance
         </button>
-      </div>
+      </form>
 
-      {/* Attendance List */}
-      {filteredAttendance.length === 0 ? (
-        <div className="empty-state">
-          No records found.
-        </div>
-      ) : (
-        filteredAttendance.map((rec) => (
-          <div key={rec._id} className="card">
-            <h4>{rec.employeeId?.fullName}</h4>
-
-            <p style={{ fontSize: "14px", color: "#666" }}>
-              Department: {rec.employeeId?.department}
-            </p>
-
-            <p>
-              Date:{" "}
-              {new Date(rec.date).toLocaleDateString()}
-            </p>
-
-            <p>
-              Status:{" "}
-              {rec.status === "Present" ? (
-                <span style={{ color: "green", fontWeight: "bold" }}>
-                  Present ✅
-                </span>
-              ) : (
-                <span style={{ color: "red", fontWeight: "bold" }}>
-                  Absent ❌
-                </span>
-              )}
-            </p>
-          </div>
-        ))
+      {message && (
+        <p style={{ marginTop: "10px" }}>{message}</p>
       )}
+
+      {/* Attendance Records */}
+      <div style={{ marginTop: "20px" }}>
+        <h3>Attendance Records</h3>
+
+        {records.length === 0 ? (
+          <p>No attendance records</p>
+        ) : (
+          records.map((rec) => (
+            <div key={rec._id}>
+              {new Date(rec.date).toLocaleDateString()} —{" "}
+              <strong>{rec.status}</strong>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 }

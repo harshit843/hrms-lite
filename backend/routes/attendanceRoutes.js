@@ -5,55 +5,43 @@ const router = express.Router();
 // Mark attendance
 router.post("/", async (req, res) => {
   try {
-    const { employeeId, date, status } = req.body;
+    const { employee, date, status } = req.body;
 
-    if (!employeeId || !date || !status) {
+    if (!employee || !date || !status) {
       return res.status(400).json({ message: "All fields required" });
     }
 
-    const existing = await Attendance.findOne({
-      employeeId,
-      date,
-    });
+    const existing = await Attendance.findOne({ employee, date });
 
     if (existing) {
       return res.status(400).json({
-        message: "Attendance already marked for this date",
+        message: "Attendance already marked for this date"
       });
     }
 
     const attendance = await Attendance.create({
-      employeeId,
+      employee,
       date,
-      status,
+      status
     });
 
     res.status(201).json(attendance);
+
   } catch (err) {
+    console.log("Attendance Error:", err.message);
     res.status(500).json({ message: err.message });
   }
 });
 
-// Get all attendance
-router.get("/", async (req, res) => {
-  try {
-    const records = await Attendance.find()
-      .populate("employeeId");
-
-    res.json(records);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// Get attendance by employee
+// Get attendance for an employee
 router.get("/:employeeId", async (req, res) => {
   try {
     const records = await Attendance.find({
-      employeeId: req.params.employeeId,
-    }).populate("employeeId");
+      employee: req.params.employeeId
+    }).populate("employee");
 
     res.json(records);
+
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

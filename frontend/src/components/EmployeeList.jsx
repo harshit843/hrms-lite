@@ -1,48 +1,35 @@
 import { useEffect, useState } from "react";
 import api from "../api";
 
-export default function EmployeeList() {
-  const [list, setList] = useState([]);
+export default function EmployeeList({ refresh }) {
+  const [employees, setEmployees] = useState([]);
+
+  const fetchEmployees = async () => {
+    try {
+      const res = await api.get("/employees");
+      setEmployees(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   useEffect(() => {
-    const fetchEmployees = async () => {
-      try {
-        const res = await api.get("/employees");
-        setList(res.data);
-      } catch (error) {
-        console.error("Error fetching employees:", error);
-      }
-    };
-
     fetchEmployees();
-  }, []);
+  }, [refresh]);
 
   return (
-  <div>
-    <h2>Employees</h2>
+    <div>
+      <h2>Employee List</h2>
 
-    {list.length === 0 ? (
-      <div className="empty-state">No employees added yet.</div>
-    ) : (
-      list.map((emp) => (
-        <div key={emp._id} className="employee-item">
-          <div>
-            <strong>{emp.fullName}</strong>
-            <div style={{ fontSize: "14px", color: "#666" }}>
-              {emp.email} | {emp.department}
-            </div>
+      {employees.length === 0 ? (
+        <p>No employees found</p>
+      ) : (
+        employees.map((emp) => (
+          <div key={emp._id}>
+            <strong>{emp.fullName}</strong> | {emp.department} | {emp.email}
           </div>
-
-          <button
-            className="btn-danger"
-            onClick={() => handleDelete(emp._id)}
-          >
-            Delete
-          </button>
-        </div>
-      ))
-    )}
-  </div>
-);
-
+        ))
+      )}
+    </div>
+  );
 }
