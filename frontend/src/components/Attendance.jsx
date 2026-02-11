@@ -1,57 +1,119 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState, useMemo } from "react";
 import api from "../api";
 
 export default function Attendance() {
-  const [employees, setEmployees] = useState([]);
-  const [form, setForm] = useState({
-    employee: "",
-    date: "",
-    status: "Present"
-  });
+  const [attendance, setAttendance] = useState([]);
+  const [filterDate, setFilterDate] = useState("");
+  const [filterDept, setFilterDept] = useState("");
 
+  // Fetch attendance
   useEffect(() => {
-    const fetchEmployees = async () => {
-      const res = await api.get("/employees");
-      setEmployees(res.data);
+    const fetchAttendance = async () => {
+      try {
+        const res = await api.get("/attendance");
+        setAttendance(res.data);
+      } catch (err) {
+        console.error(err);
+      }
     };
-    fetchEmployees();
+
+    fetchAttendance();
   }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    await api.post("/attendance", form);
-    alert("Attendance marked");
-  };
+  // Get unique departments for filter dropdown
+  const departments = useMemo(() => {
+    const depts = attendance.map(
+      (rec) => rec.employeeId?.department
+    );
+    return [...new Set(depts)];
+  }, [attendance]);
+
+  // Filter logic
+  const filteredAttendance = attendance.filter((rec) => {
+    const recordDate = new Date(rec.date)
+      .toISOString()
+      .split("T")[0];
+
+    const matchDate = filterDate
+      ? recordDate === filterDate
+      : true;
+
+    const matchDept = filterDept
+      ? rec.employeeId?.department === filterDept
+      : true;
+
+    return matchDate && matchDept;
+  });
 
   return (
     <div>
-      <h2>Mark Attendance</h2>
-      <form onSubmit={handleSubmit}>
+      <h2>Attendance Records</h2>
+
+      {/* Filters */}
+      <div style={{ marginBottom: "20px" }}>
+        <input
+          type="date"
+          value={filterDate}
+          onChange={(e) => setFilterDate(e.target.value)}
+        />
+
         <select
-          onChange={(e) => setForm({ ...form, employee: e.target.value })}
+          value={filterDept}
+          onChange={(e) => setFilterDept(e.target.value)}
         >
-          <option>Select Employee</option>
-          {employees.map(emp => (
-            <option key={emp._id} value={emp._id}>
-              {emp.fullName}
+          <option value="">All Departments</option>
+          {departments.map((dept, index) => (
+            <option key={index} value={dept}>
+              {dept}
             </option>
           ))}
         </select>
 
-        <input
-          type="date"
-          onChange={(e) => setForm({ ...form, date: e.target.value })}
-        />
-
-        <select
-          onChange={(e) => setForm({ ...form, status: e.target.value })}
+        <button
+          className="btn-primary"
+          onClick={() => {
+            setFilterDate("");
+            setFilterDept("");
+          }}
         >
-          <option value="Present">Present</option>
-          <option value="Absent">Absent</option>
-        </select>
+          Clear Filters
+        </button>
+      </div>
 
-        <button type="submit">Mark</button>
-      </form>
+      {/* Attendance List */}
+      {filteredAttendance.length === 0 ? (
+        <div className="empty-state">
+          No records found.
+        </div>
+      ) : (
+        filteredAttendance.map((rec) => (
+          <div key={rec._id} className="card">
+            <h4>{rec.employeeId?.fullName}</h4>
+
+            <p style={{ fontSize: "14px", color: "#666" }}>
+              Department: {rec.employeeId?.department}
+            </p>
+
+            <p>
+              Date:{" "}
+              {new Date(rec.date).toLocaleDateString()}
+            </p>
+
+            <p>
+              Status:{" "}
+              {rec.status === "Present" ? (
+                <span style={{ color: "green", fontWeight: "bold" }}>
+                  Present ✅
+                </span>
+              ) : (
+                <span style={{ color: "red", fontWeight: "bold" }}>
+                  Absent ❌
+                </span>
+              )}
+            </p>
+          </div>
+        ))
+      )}
     </div>
   );
 }

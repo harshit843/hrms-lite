@@ -12,12 +12,14 @@ export default function EmployeeForm({ onAdd }) {
   };
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
       <input placeholder="Employee ID" value={form.employeeId} onChange={e=>setForm({...form, employeeId:e.target.value})} />
       <input placeholder="Full Name" value={form.fullName} onChange={e=>setForm({...form, fullName:e.target.value})} />
       <input placeholder="Email" value={form.email} onChange={e=>setForm({...form, email:e.target.value})} />
       <input placeholder="Department" value={form.department} onChange={e=>setForm({...form, department:e.target.value})} />
-      <button>Add</button>
+      <button type="submit" className="btn-primary">
+        Add Employee
+      </button>
     </form>
   );
 }

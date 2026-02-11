@@ -18,17 +18,31 @@ export default function EmployeeList() {
   }, []);
 
   return (
-    <div>
-      <h2>Employees</h2>
-      {list.length === 0 ? (
-        <p>No employees found</p>
-      ) : (
-        list.map(emp => (
-          <div key={emp._id}>
-            {emp.fullName} - {emp.department}
+  <div>
+    <h2>Employees</h2>
+
+    {list.length === 0 ? (
+      <div className="empty-state">No employees added yet.</div>
+    ) : (
+      list.map((emp) => (
+        <div key={emp._id} className="employee-item">
+          <div>
+            <strong>{emp.fullName}</strong>
+            <div style={{ fontSize: "14px", color: "#666" }}>
+              {emp.email} | {emp.department}
+            </div>
           </div>
-        ))
-      )}
-    </div>
-  );
+
+          <button
+            className="btn-danger"
+            onClick={() => handleDelete(emp._id)}
+          >
+            Delete
+          </button>
+        </div>
+      ))
+    )}
+  </div>
+);
+
 }
